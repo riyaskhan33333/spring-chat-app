@@ -316,7 +316,7 @@ async function getMessageOfTopic(topic) {
     if (topic == "tech")   { chattech.innerHTML  = ""; }
     if (topic == "funny")  { chatfunny.innerHTML = ""; }
 
-    const response = await fetch("https://coreen-nonoptic-industriously.ngrok-free.dev/api/messages/" + topic);
+    const response = await fetch("https://spring-chat-app-ojvj.onrender.com/api/messages/" + topic);
     const prevMsg = await response.json();
     return await prevMsg;
 }
