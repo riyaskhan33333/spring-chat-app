@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Live Now</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+/* ===========================
+   SUPER NEON CHAT LI
+   =========================== */
+li.neon-text {
+    list-style: none !important;
+    position: relative !important;
+    background: linear-gradient(145deg, #1e1e2f, #2a2a3d) !important; /* dark neon bg */
+    color: #fff !important;
+    padding: 12px 16px !important;
+    margin: 8px 0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 0 8px #ff00ff33, 0 0 16px #00ffff22 !important; /* glow */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    font-size: 15px !important;
+    max-width: 70% !important;
+    word-wrap: break-word !important;
+    transition: transform 0.2s ease !important; 
+    box-shadow: 0.2s ease !important;
+    display:flex !important;
+    flex-direction:column !important;
+}
+
+/* Hover glow effect */
+li.neon-text:hover {
+    transform: scale(1.03) !important;
+    box-shadow: 0 0 12px #ff00ff55, 0 0 20px #00ffff44 !important;
+}
+
+/* Sub text for senderId or info */
+li.neon-text sub {
+    display: block !important;
+    font-size: 11px !important;
+    color: #ccc !important;
+    border-bottom: none !important;
+    margin-top: 4px !important;
+    font-style: italic !important;
+}
+
+/* Optional timestamp inside li */
+li.neon-text .timestamp {
+    font-size: 10px !important;
+    color: #999 !important;
+    position: absolute !important;
+    bottom: 4px !important;
+    right: 12px !important;
+}
+
+    
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #fff;
+            padding-bottom: 120px;
+        }
+
+        /* ---------- TEXT EFFECTS ---------- */
+        .shadow-dance-text {
+            font-size: 1.4rem;
+            color: #fff;
+            text-shadow: 2px 2px 0 #ff005e, 4px 4px 0 #00d4ff;
+            animation: shadow-dance 2s infinite;
+        }
+
+        @keyframes shadow-dance {
+            0%,100% { text-shadow: 2px 2px 0 #ff005e, 4px 4px 0 #00d4ff; }
+            50% { text-shadow: -2px -2px 0 #00d4ff, -4px -4px 0 #ff005e; }
+        }
+
+        .neon-text {
+            animation: glow 1.5s infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 5px #fff; }
+            to { text-shadow: 0 0 20px #0ff; }
+        }
+
+        /* ---------- BUTTON ---------- */
+        .button-89 {
+            border-radius: 14px;
+            padding: 16px;
+            transition: transform .2s ease, background .3s ease;
+            background: #fff;
+        }
+
+        .button-89:hover {
+            transform: translateY(-6px) scale(1.03);
+            background: #ffc107;
+        }
+
+        /* ---------- CHAT ---------- */
+        ul { list-style: none; padding: 0; }
+        .chatdiv {
+            height: 300px;
+            overflow-y: auto;
+            background: rgba(255,255,255,0.9);
+            color: #000;
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        /* ---------- INPUT BAR ---------- */
+        .chat-input-bar {
+            background: #fff;
+            border-top: 3px solid #ffc107;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 1.6rem; }
+            .chatdiv { height: 240px; }
+        }
+        
+        .toast-body {
+    font-weight: bold;
+    font-size: 1rem;
+}
+        
+    </style>
+</head>
+
+<body>
+<!-- Toast Container -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1080">
+  <div id="chatToast" class="toast align-items-center text-bg-warning border-0" role="showToast" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="chatToastMessage">
+        <!-- message goes here -->
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================= HEADER ================= -->
+<header class="bg-dark py-3">
+    <div class="container">
+        <div class="row align-items-center gy-3">
+
+            <div class="col-12 col-md-8 text-center text-md-start">
+                <h1 class="mb-0">
+                    Group chat now
+                    <span class="text-warning shadow-dance-text d-block d-sm-inline">
+                        with your friends!
+                    </span>
+                </h1>
+            </div>
+
+            <div class="col-12 col-md-4 text-center text-md-end">
+                <a sec:authorize="isAnonymous()" href="/login" class="btn btn-outline-warning me-2">
+                    Login
+                </a>
+
+                <form sec:authorize="isAuthenticated()"
+                      th:action="@{/logout}"
+                      method="post"
+                      class="d-inline">
+                    <button type="submit" class="btn btn-warning">
+                        Logout
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</header>
+
+<!-- ================= TOPIC BUTTONS ================= -->
+<div class="container my-4">
+    <div class="row g-3 text-center">
+
+        <div class="col-6 col-md-3">
+            <button onclick="forSubscribe(1)" class="w-100 button-89 fw-bold">
+                🥶<br>About Anime
+            </button>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <button onclick="forSubscribe(2)" class="w-100 button-89 fw-bold">
+                🤤<br>About Food
+            </button>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <button onclick="forSubscribe(3)" class="w-100 button-89 fw-bold">
+                🤖<br>About Tech
+            </button>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <button onclick="forSubscribe(4)" class="w-100 button-89 fw-bold">
+                🤡<br>About Funny
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= CHAT AREA ================= -->
+<div id="disnone" style="display:none;">
+    <div class="container mb-5">
+        <ul id="chatanime" class="chatdiv"></ul>
+        <ul id="chatfood" class="chatdiv"></ul>
+        <ul id="chattech" class="chatdiv"></ul>
+        <ul id="chatfunny" class="chatdiv"></ul>
+    </div>
+
+    <!-- ================= INPUT BAR ================= -->
+    <div class="position-fixed bottom-0 start-0 w-100 chat-input-bar py-2">
+        <div class="container">
+            <div class="row g-2 align-items-center">
+
+                <div class="col-9 col-md-10">
+                    <input id="msg"
+                           class="form-control fs-5 border-warning"
+                           placeholder="Enter message..." />
+                </div>
+
+                <div class="col-3 col-md-2 d-grid">
+                    <button onclick="send()" class="btn btn-dark fs-5">
+                        Send
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= SCRIPTS (UNCHANGED) ================= -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+
+   <script>
+   
+ 
+   /*toast from bootstrap*/
+   function showToast(message) {
+	    const toastEl = document.getElementById("chatToast");
+	    const toastMsg = document.getElementById("chatToastMessage");
+	    toastMsg.textContent = message;
+
+	    const toast = new bootstrap.Toast(toastEl, { delay: 3000 }); // 3 seconds
+	    toast.show();
+	}
+
+   
+/* ===========================
+   ENTER KEY SEND HANDLER
+   =========================== */
+document.getElementById("msg").addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        send();
+        event.preventDefault();
+    }
+});
+
+/* ===========================
+   CHAT DOM REFERENCES
+   =========================== */
+   let chatanime = document.getElementById("chatanime");
+   let chatfood  = document.getElementById("chatfood");
+   let chattech  = document.getElementById("chattech");
+   let chatfunny = document.getElementById("chatfunny");
+   let animeSubscribed = null;
+	let foodSubscribed  = null;
+	let techSubscribed  = null;
+	let funnySubscribed = null;
+function everythingNull(){
+	animeSubscribed = null;
+    foodSubscribed  = null;
+	techSubscribed  = null;
+	funnySubscribed = null;
+
+}
+
+
+/* ===========================
+   WEBSOCKET + STOMP SETUP
+   =========================== */
+let socket = new SockJS("/chat");
+let stompClient = Stomp.over(socket);
+
+stompClient.connect(
+    {},
+    function () {
+        showToast("connection success, choose topic!");
+    },
+    function () {
+        showToast("some issue with connection");
+    }
+);
+
+/* ===========================
+   FETCH PREVIOUS MESSAGES
+   =========================== */
+async function getMessageOfTopic(topic) {
+
+    if (topic == "anime")  { chatanime.innerHTML = ""; }
+    if (topic == "food")   { chatfood.innerHTML  = ""; }
+    if (topic == "tech")   { chattech.innerHTML  = ""; }
+    if (topic == "funny")  { chatfunny.innerHTML = ""; }
+
+    const response = await fetch("https://coreen-nonoptic-industriously.ngrok-free.dev/api/messages/" + topic);
+    const prevMsg = await response.json();
+    return await prevMsg;
+}
+
+function createEl(Msg){
+    return Msg.message +
+        "<sub class='message-meta'>" +
+        "senderId: " + Msg.senderId +
+        " | " + formatDateTime(Msg.createdAt) +
+        " | " + Msg.topic +
+        "</sub>";
+}
+function formatDateTime(dateStr) {
+    var d = new Date(dateStr);
+
+    var day   = String(d.getDate()).padStart(2, "0");
+    var month = String(d.getMonth() + 1).padStart(2, "0");
+    var year  = d.getFullYear();
+
+    var hours   = String(d.getHours()).padStart(2, "0");
+    var minutes = String(d.getMinutes()).padStart(2, "0");
+
+    return hours + ":" + minutes + " · " + day + "-" + month + "-" + year;
+}
+
+/* ===========================
+   TOPIC SUBSCRIBE HANDLER
+   =========================== */
+async function forSubscribe(credentials) {
+
+    switch (credentials) {
+
+        /* =======================
+           ANIME
+           ======================= */
+        case 1: {
+            chatfood.style.display  = "none";
+            chattech.style.display  = "none";
+            chatfunny.style.display = "none";
+            chatanime.style.display = "block";
+
+            if (animeSubscribed) animeSubscribed.unsubscribe();
+            if (foodSubscribed)  foodSubscribed.unsubscribe();
+            if (techSubscribed)  techSubscribed.unsubscribe();
+            if (funnySubscribed) funnySubscribed.unsubscribe();
+            everythingNull();
+
+            animeSubscribed = stompClient.subscribe("/topic/anime", function (frame) {
+                animeMsg = JSON.parse(frame.body);
+
+                let li = document.createElement("li");
+                li.innerHTML =createEl(animeMsg);
+                    
+
+                li.className = "neon-text";
+                chatanime.appendChild(li);
+                chatanime.scrollTop = chatanime.scrollHeight;
+            });
+
+            showToast("subscribed to anime!");
+
+            const animeDatas = await getMessageOfTopic("anime");
+            animeDatas.forEach(animeData => {
+                let li = document.createElement("li");
+                li.innerHTML =createEl(animeData);
+                    
+                li.className = "neon-text";
+                chatanime.appendChild(li);
+            });
+
+            requestAnimationFrame(() => {
+                chatanime.scrollTop = chatanime.scrollHeight;
+            });
+
+            document.getElementById("disnone").style.display = "block";
+            break;
+        }
+
+        /* =======================
+           FOOD
+           ======================= */
+        case 2: {
+            chatanime.style.display = "none";
+            chattech.style.display  = "none";
+            chatfunny.style.display = "none";
+            chatfood.style.display  = "block";
+
+            if (animeSubscribed) animeSubscribed.unsubscribe();
+            if (foodSubscribed)  foodSubscribed.unsubscribe();
+            if (techSubscribed)  techSubscribed.unsubscribe();
+            if (funnySubscribed) funnySubscribed.unsubscribe();
+            everythingNull();
+
+            foodSubscribed = stompClient.subscribe("/topic/food", function (frame) {
+                foodMsg = JSON.parse(frame.body);
+
+                let li = document.createElement("li");
+                li.innerHTML =createEl(foodMsg);
+                    
+
+                li.className = "neon-text";
+                chatfood.appendChild(li);
+                chatfood.scrollTop = chatfood.scrollHeight;
+            });
+
+            showToast("subscribed to food!");
+
+            const foodDatas = await getMessageOfTopic("food");
+            foodDatas.forEach(foodData => {
+                let li = document.createElement("li");
+                li.innerHTML =createEl(foodData);
+                    
+                li.className = "neon-text";
+                chatfood.appendChild(li);
+            });
+
+            requestAnimationFrame(() => {
+                chatfood.scrollTop = chatfood.scrollHeight;
+            });
+
+            document.getElementById("disnone").style.display = "block";
+            break;
+        }
+
+        /* =======================
+           TECH
+           ======================= */
+        case 3: {
+            chatanime.style.display = "none";
+            chatfood.style.display  = "none";
+            chatfunny.style.display = "none";
+            chattech.style.display  = "block";
+
+            if (animeSubscribed) animeSubscribed.unsubscribe();
+            if (foodSubscribed)  foodSubscribed.unsubscribe();
+            if (techSubscribed)  techSubscribed.unsubscribe();
+            if (funnySubscribed) funnySubscribed.unsubscribe();
+            everythingNull();
+
+            techSubscribed = stompClient.subscribe("/topic/tech", function (frame) {
+                techMsg = JSON.parse(frame.body);
+
+                let li = document.createElement("li");
+                li.innerHTML =createEl(techMsg);
+
+                li.className = "neon-text";
+                chattech.appendChild(li);
+                chattech.scrollTop = chattech.scrollHeight;
+            });
+
+            showToast("subscribed to tech!");
+
+            const techDatas = await getMessageOfTopic("tech");
+            techDatas.forEach(techData => {
+                let li = document.createElement("li");
+                li.innerHTML =createEl(techData);
+                li.className = "neon-text";
+                chattech.appendChild(li);
+            });
+
+            requestAnimationFrame(() => {
+                chattech.scrollTop = chattech.scrollHeight;
+            });
+
+            document.getElementById("disnone").style.display = "block";
+            break;
+        }
+
+        /* =======================
+           FUNNY
+           ======================= */
+        case 4: {
+            chatanime.style.display = "none";
+            chatfood.style.display  = "none";
+            chattech.style.display  = "none";
+            chatfunny.style.display = "block";
+
+            if (animeSubscribed) animeSubscribed.unsubscribe();
+            if (foodSubscribed)  foodSubscribed.unsubscribe();
+            if (techSubscribed)  techSubscribed.unsubscribe();
+            if (funnySubscribed) funnySubscribed.unsubscribe();
+            everythingNull();
+
+            funnySubscribed = stompClient.subscribe("/topic/funny", function (frame) {
+                funnyMsg = JSON.parse(frame.body);
+
+                let li = document.createElement("li");
+                li.innerHTML =createEl(funnyMsg);
+
+                li.className = "neon-text";
+                chatfunny.appendChild(li);
+                chatfunny.scrollTop = chatfunny.scrollHeight;
+            });
+
+            showToast("subscribed to funny!");
+
+            const funnyDatas = await getMessageOfTopic("funny");
+            funnyDatas.forEach(funnyData => {
+                let li = document.createElement("li");
+                li.innerHTML =createEl(funnyData);
+                    
+                li.className = "neon-text";
+                chatfunny.appendChild(li);
+            });
+
+            requestAnimationFrame(() => {
+                chatfunny.scrollTop = chatfunny.scrollHeight;
+            });
+
+            document.getElementById("disnone").style.display = "block";
+            break;
+        }
+
+        default:
+            showToast("this topic is not available");
+    }
+}
+
+/* ===========================
+   SEND MESSAGE
+   =========================== */
+function send() {
+	let msgInput = document.getElementById("msg");
+    let msgText = msgInput.value.trim(); // remove extra spaces
+
+    if (!msgText) { // if empty string
+        showToast("Please enter a message before sending!"); // optional
+        return; // stop the function
+    }
+    if (animeSubscribed != null) {
+        stompClient.send(
+            "/app/sendtoanime",
+            {},
+            JSON.stringify({ message: msgText, senderId: null, topic: "anime" })
+        );
+        showToast("message sent successfully!");
+        document.getElementById("msg").value = "";
+    }
+
+    if (foodSubscribed != null) {
+        stompClient.send(
+            "/app/sendtofood",
+            {},
+            JSON.stringify({ message: msgText, senderId: null, topic: "food" })
+        );
+        showToast("message sent successfully!");
+        document.getElementById("msg").value = "";
+    }
+
+    if (techSubscribed != null) {
+        stompClient.send(
+            "/app/sendtotech",
+            {},
+            JSON.stringify({ message: msgText, senderId: null, topic: "tech" })
+        );
+        showToast("message sent successfully!");
+        document.getElementById("msg").value = "";
+    }
+
+    if (funnySubscribed != null) {
+        stompClient.send(
+            "/app/sendtofunny",
+            {},
+            JSON.stringify({ message: msgText, senderId: null, topic: "funny" })
+        );
+        showToast("message sent successfully!");
+        document.getElementById("msg").value = "";
+    }
+}
+</script>
+
+</body>
+</html>
